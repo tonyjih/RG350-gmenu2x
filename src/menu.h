@@ -142,6 +142,9 @@ public:
 
 	const std::vector<std::string> &getSections() { return sections; }
 	void renameSection(int index, const std::string &name);
+	void translatorLink();
+	void translatorLinkNotDistinguishLan();
+	void readLinksOfSectionAndTranslator(std::string const& path, uint i);
 };
 
 #endif // MENU_H

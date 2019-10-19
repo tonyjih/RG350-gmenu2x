@@ -48,6 +48,7 @@
 #include "textdialog.h"
 #include "wallpaperdialog.h"
 #include "utilities.h"
+#include "link.h"
 
 #include <iostream>
 #include <sstream>
@@ -80,7 +81,8 @@
 #include <linux/soundcard.h>
 
 #include <sys/mman.h>
-
+#include "common.h"
+//#define DIALOGPRINT
 using namespace std;
 
 #ifndef DEFAULT_WALLPAPER_PATH
@@ -374,14 +376,16 @@ void GMenu2X::initFont() {
 		font = Font::defaultFont();
 	}
 }
+//#define OUTPUT_TO_LOG
 
 void GMenu2X::initMenu() {
 	//Menu structure handler
 	menu.reset(new Menu(this, ts));
+	//print(GMenu2X::getHome());
 	for (uint i=0; i<menu->getSections().size(); i++) {
 		//Add virtual links in the applications section
 		if (menu->getSections()[i]=="applications") {
-			menu->addActionLink(i, "Explorer",
+			menu->addActionLink(i, tr["Explorer"],
 					bind(&GMenu2X::explorer, this),
 					tr["Launch an application"],
 					"skin:icons/explorer.png");
@@ -389,7 +393,7 @@ void GMenu2X::initMenu() {
 
 		//Add virtual links in the setting section
 		else if (menu->getSections()[i]=="settings") {
-			menu->addActionLink(i, "GMenu2X",
+			menu->addActionLink(i, tr["GMenu2X"],
 					bind(&GMenu2X::showSettings, this),
 					tr["Configure GMenu2X's options"],
 					"skin:icons/configure.png");
@@ -410,7 +414,7 @@ void GMenu2X::initMenu() {
 			menu->addActionLink(i, tr["About"],
 					bind(&GMenu2X::about, this),
 					tr["Info about GMenu2X"],
-					"skin:icons/about.png");
+					"skin:icons/about_gmenu2x.png");
 		}
 	}
 
@@ -419,10 +423,87 @@ void GMenu2X::initMenu() {
 
 	menu->setSectionIndex(confInt["section"]);
 	menu->setLinkIndex(confInt["link"]);
+	menu->translatorLink();
+	/*std::vector<std::vector<Link*>> links;
+	string lang = tr.lang();
+	if (!lang.compare("简体中文"))
+	{
+		#if defined(OUTPUT_TO_LOG)
+		int fd = open(LOG_FILE, O_WRONLY | O_APPEND | O_CREAT, 0644);
+		char buf[1024];
+		#endif
 
+		string linkTitle,linkDescription;
+		for (vector< vector<Link*> >::iterator section = links.begin(); section<links.end(); section++)
+		{
+			for (vector<Link*>::iterator link = section->begin(); link<section->end(); link++)
+			{
+				linkTitle=(*link)->getTitle().c_str();
+				linkTitle=tr[linkTitle.c_str()];
+				//linkTitle=tr.translate(linkTitle.c_str());
+				(*link)->setTitle(linkTitle.c_str());
+				
+				linkDescription = (*link)->getDescription().c_str();
+				linkDescription=tr[linkDescription.c_str()];
+				//linkDescription=tr.translate(linkDescription.c_str());
+				(*link)->setDescription(linkDescription.c_str());
+				#if defined(OUTPUT_TO_LOG)
+				//ERROR("'%s'\n", (*link)->getTitle().c_str());
+				//fprintf(stdout, "%s\n", (*link)->getTitle().c_str());
+				strcpy(buf, (*link)->getTitle().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, (*link)->getDescription().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));	
+				
+				strcpy(buf, (*link)->getTitle().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "=");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, linkTitle.c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, (*link)->getDescription().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "=");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, linkDescription.c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));			
+				#endif
+				#if defined(DIALOGPRINT)
+				strLog=strLog+"\n"+(*link)->getTitle().c_str();
+				#endif
+			}
+		}
+		#if defined(OUTPUT_TO_LOG)
+		if (fd < 0) {
+			ERROR("Unable to open log file for write: %s\n", LOG_FILE);
+		} else {
+			//fflush(stdout);
+			//dup2(fd, STDOUT_FILENO);
+			//dup2(fd, STDERR_FILENO);
+			strcpy(buf, lang.c_str());
+			write(fd, buf, strlen(buf));	
+			close(fd);
+		}
+		#endif
+	}*/
+	#if defined(DIALOGPRINT)
+	//print(strLog);
+	#endif
 	layers.push_back(menu);
 }
-
+void GMenu2X::print(string str) {
+	string title("log Info:");
+	TextDialog td(this, "GMenu2X", title, "icons/about.png", str);
+	td.exec();
+}
 void GMenu2X::about() {
 	string text(readFileAsString(GMENU2X_SYSTEM_DIR "/about.txt"));
 	string build_date("Build date: " __DATE__);
@@ -555,6 +636,18 @@ void GMenu2X::writeSkinConfig() {
 		inf.close();
 	}
 }
+#if defined(DELETE_SKINCONFIG_BEFORE_CHANGE)
+void GMenu2X::deleteSkinConfig()
+{
+	string conffile = getHome() + "/skins/";
+	conffile = conffile + confStr["skin"];
+	conffile = conffile + "/skin.conf";
+	if (fileExists(conffile.c_str())) 
+	{
+		remove(conffile.c_str());
+	}
+}
+#endif
 
 void GMenu2X::readTmp() {
 	lastSelectorElement = -1;
@@ -750,6 +843,9 @@ void GMenu2X::showSettings() {
 		if (lang != tr.lang()) {
 			tr.setLang(lang);
 			confStr["lang"] = lang;
+			writeConfig();
+			((Menu*)this)->Menu::translatorLinkNotDistinguishLan();
+			return;
 		}
 
 		writeConfig();
@@ -797,6 +893,9 @@ void GMenu2X::skinMenu() {
 
 	if (sd.exec()) {
 		if (curSkin != confStr["skin"]) {
+			#if defined(DELETE_SKINCONFIG_BEFORE_CHANGE)
+			deleteSkinConfig();
+			#endif			
 			setSkin(confStr["skin"]);
 			writeConfig();
 		}

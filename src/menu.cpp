@@ -40,7 +40,12 @@
 #include "filelister.h"
 #include "utilities.h"
 #include "debug.h"
-
+//#define OUTPUT_TO_LOG
+#if defined(OUTPUT_TO_LOG)
+#include <fcntl.h>
+#endif
+#include "translator.h"
+extern std::string strLog;
 using namespace std;
 
 
@@ -856,3 +861,167 @@ void Menu::readLinksOfSection(std::string const& path, uint i)
 void Menu::renameSection(int index, const string &name) {
 	sections[index] = name;
 }
+void Menu::readLinksOfSectionAndTranslator(std::string const& path, uint i)
+{
+	DIR *dirp = opendir(path.c_str());
+	if (!dirp) return;
+
+	// Check whether link files in this directory could be deleted.
+	bool deletable = access(path.c_str(), W_OK) == 0;
+
+	while (struct dirent *dptr = readdir(dirp)) {
+		if (dptr->d_type != DT_REG) continue;
+		string linkfile = path + '/' + dptr->d_name;
+
+		LinkApp *link = new LinkApp(gmenu2x, linkfile, deletable);
+		if (link->targetExists()) {
+			link->setSize(gmenu2x->skinConfInt["linkWidth"],gmenu2x->skinConfInt["linkHeight"]);
+			//link->setTitle(tr[link->getTitle()]);
+			links[i].push_back(link);
+		}
+	}
+
+	closedir(dirp);
+}	
+void Menu::translatorLink()
+{
+	Translator &tr = ((Menu*)this)->Menu::gmenu2x->tr;
+	string lang = tr.lang();
+	if (!lang.compare("简体中文"))
+	{
+		#if defined(OUTPUT_TO_LOG)
+		int fd = open(LOG_FILE, O_WRONLY | O_APPEND | O_CREAT, 0644);
+		char buf[1024];
+		#endif
+
+		string linkTitle,linkDescription;
+		for (vector< vector<Link*> >::iterator section = links.begin(); section<links.end(); section++)
+		{
+			for (vector<Link*>::iterator link = section->begin(); link<section->end(); link++)
+			{
+				linkTitle=(*link)->getTitle().c_str();
+				//linkTitle=tr[linkTitle.c_str()];
+				linkTitle=tr.translate(linkTitle.c_str());
+				(*link)->setTitle(linkTitle.c_str());
+				
+				linkDescription = (*link)->getDescription().c_str();
+				//linkDescription=tr[linkDescription.c_str()];
+				linkDescription=tr.translate(linkDescription.c_str());
+				(*link)->setDescription(linkDescription.c_str());
+				#if defined(OUTPUT_TO_LOG)
+				//ERROR("'%s'\n", (*link)->getTitle().c_str());
+				//fprintf(stdout, "%s\n", (*link)->getTitle().c_str());
+				/*strcpy(buf, (*link)->getTitle().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, (*link)->getDescription().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));*/	
+				strcpy(buf, (*link)->getTitle().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "=");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, linkTitle.c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, (*link)->getDescription().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "=");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, linkDescription.c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));			
+				#endif
+				#if defined(DIALOGPRINT)
+				strLog=strLog+"\n"+(*link)->getTitle().c_str();
+				#endif
+			}
+		}
+		#if defined(OUTPUT_TO_LOG)
+		if (fd < 0) {
+			ERROR("Unable to open log file for write: %s\n", LOG_FILE);
+		} else {
+			//fflush(stdout);
+			//dup2(fd, STDOUT_FILENO);
+			//dup2(fd, STDERR_FILENO);
+			strcpy(buf, lang.c_str());
+			write(fd, buf, strlen(buf));	
+			close(fd);
+		}
+		#endif
+	}
+}
+void Menu::translatorLinkNotDistinguishLan()
+{
+	Translator &tr = ((Menu*)this)->Menu::gmenu2x->tr;
+	string lang = tr.lang();
+	#if defined(OUTPUT_TO_LOG)
+		int fd = open(LOG_FILE, O_WRONLY | O_APPEND | O_CREAT, 0644);
+		char buf[1024];
+	#endif
+
+		string linkTitle,linkDescription;
+		for (vector< vector<Link*> >::iterator section = links.begin(); section<links.end(); section++)
+		{
+			for (vector<Link*>::iterator link = section->begin(); link<section->end(); link++)
+			{
+				linkTitle=(*link)->getTitle().c_str();
+				//linkTitle=tr[linkTitle.c_str()];
+				linkTitle=tr.translate(linkTitle.c_str());
+				(*link)->setTitle(linkTitle.c_str());
+				
+				linkDescription = (*link)->getDescription().c_str();
+				//linkDescription=tr[linkDescription.c_str()];
+				linkDescription=tr.translate(linkDescription.c_str());
+				(*link)->setDescription(linkDescription.c_str());
+			#if defined(OUTPUT_TO_LOG)
+				//ERROR("'%s'\n", (*link)->getTitle().c_str());
+				//fprintf(stdout, "%s\n", (*link)->getTitle().c_str());
+				/*strcpy(buf, (*link)->getTitle().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, (*link)->getDescription().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));*/	
+				strcpy(buf, (*link)->getTitle().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "=");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, linkTitle.c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, (*link)->getDescription().c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "=");
+				write(fd, buf, strlen(buf));
+				strcpy(buf, linkDescription.c_str());
+				write(fd, buf, strlen(buf));
+				strcpy(buf, "\n");
+				write(fd, buf, strlen(buf));			
+			#endif
+			#if defined(DIALOGPRINT)
+				strLog=strLog+"\n"+(*link)->getTitle().c_str();
+			#endif
+			}
+		}
+	#if defined(OUTPUT_TO_LOG)
+		if (fd < 0) {
+			ERROR("Unable to open log file for write: %s\n", LOG_FILE);
+		} else {
+			//fflush(stdout);
+			//dup2(fd, STDOUT_FILENO);
+			//dup2(fd, STDERR_FILENO);
+			strcpy(buf, lang.c_str());
+			write(fd, buf, strlen(buf));	
+			close(fd);
+		}
+	#endif
+}
+

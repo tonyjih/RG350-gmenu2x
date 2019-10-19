@@ -52,6 +52,8 @@ class Menu;
 #define LOG_FILE "/var/log/gmenu2x.log"
 #endif
 
+#define DELETE_SKINCONFIG_BEFORE_CHANGE
+
 const int LOOP_DELAY = 30000;
 
 extern const char *CARD_ROOT;
@@ -177,6 +179,7 @@ public:
 	void about();
 	void viewLog();
 	void changeWallpaper();
+	void print(std::string str);	
 
 #ifdef ENABLE_CPUFREQ
 	void setClock(unsigned mhz);
@@ -196,6 +199,9 @@ public:
 	void saveSelection();
 	void writeConfig();
 	void writeSkinConfig();
+	#if defined(DELETE_SKINCONFIG_BEFORE_CHANGE)
+	void deleteSkinConfig();
+	#endif
 	void writeTmp(int selelem=-1, const std::string &selectordir="");
 
 	void addLink();
